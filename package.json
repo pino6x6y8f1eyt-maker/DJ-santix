@@ -1,13 +1,21 @@
 {
   "name": "doncubodj",
   "version": "1.0.0",
+  "description": "¡DonCuboDJ! - El bot de música pa panas.bxngh.lol",
   "main": "index.js",
-  "scripts": { "start": "node index.js" },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "discord.js": "^14.15.3",
     "@discordjs/voice": "^0.17.0",
+    "@discordjs/opus": "^0.9.0",
     "play-dl": "^1.9.7",
     "ffmpeg-static": "^5.2.0",
-    "libsodium-wrappers": "^0.7.13"
+    "libsodium-wrappers": "^0.7.13",
+    "tweetnacl": "^1.0.3"
   }
 }
