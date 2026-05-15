@@ -1,9 +1,3 @@
-const play = require('play-dl');
-play.setToken({
-    youtube : {
-        cookie : process.env.YT_COOKIE // Opcional, pa saltar bloqueo
-    }
-})
 
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection } = require('@discordjs/voice');
