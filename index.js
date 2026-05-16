@@ -1,10 +1,16 @@
-
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActivityType } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection } = require('@discordjs/voice');
 const play = require('play-dl');
 const ffmpeg = require('ffmpeg-static');
 
-console.log('🧱 FFMPEG path:', ffmpeg); // Pa checar si Railway lo instaló
+// METE LAS COOKIES PA BYPASSEAR YOUTUBE 2026
+play.setToken({
+    youtube: {
+        cookie: process.env.YT_COOKIE || ""
+    }
+})
+
+console.log('🧱 FFMPEG path:', ffmpeg);
 
 const client = new Client({
     intents: [
@@ -20,7 +26,12 @@ const prefix = '!';
 
 client.once('ready', () => {
     console.log(`🧱 ¡DonCuboDJ! está online pa los panas.bxngh.lol`);
-    client.user.setActivity('¡rolitas 24/7!', { type: 'LISTENING' });
+
+    // STATUS FANTASMA + DND ROJO
+    client.user.setPresence({
+        activities: [{ name: '👻escuchando música👻', type: ActivityType.Listening }],
+        status: 'dnd'
+    });
 });
 
 client.on('messageCreate', async msg => {
@@ -40,10 +51,10 @@ client.on('messageCreate', async msg => {
 
         let searchResult;
         try {
-            searchResult = await play.search(search, { limit: 1, source: { youtube: 'video' } });
+            searchResult = await play.search(search, { limit: 1 });
         } catch (e) {
             console.error('🧱 Error buscando:', e);
-            return msg.reply('🧱 YouTube anda de tóxico pa. Usa link de SoundCloud mejor.');
+            return msg.reply('🧱 YouTube anda de tóxico pa. ¿Metiste las cookies? O usa SoundCloud mejor.');
         }
 
         if (!searchResult[0]) return msg.reply('🧱 ¡No encontré esa rola pa! ¿Sí existe o te la inventaste?');
@@ -85,10 +96,10 @@ client.on('messageCreate', async msg => {
         } else {
             serverQueue.songs.push(song);
             const embed = new EmbedBuilder()
-              .setColor('#FF00FF')
-              .setTitle('🧱 ¡Rolón agregado a la cola!')
-              .setDescription(`**${song.title}**`)
-              .addFields({ name: 'Duración', value: song.duration, inline: true }, { name: 'Pedida por', value: song.requestedBy, inline: true });
+             .setColor('#FF00FF')
+             .setTitle('🧱 ¡Rolón agregado a la cola!')
+             .setDescription(`**${song.title}**`)
+             .addFields({ name: 'Duración', value: song.duration, inline: true }, { name: 'Pedida por', value: song.requestedBy, inline: true });
             return msg.channel.send({ embeds: [embed] });
         }
     }
@@ -107,15 +118,22 @@ client.on('messageCreate', async msg => {
         serverQueue.player.stop();
         getVoiceConnection(msg.guild.id)?.destroy();
         queue.delete(msg.guild.id);
+
+        // VUELVE AL STATUS FANTASMA
+        client.user.setPresence({
+            activities: [{ name: '👻escuchando música👻', type: ActivityType.Listening }],
+            status: 'dnd'
+        });
+
         msg.reply('🧱 ¡Don Cubo se bajó de la bocina! Ya no hay música');
     }
 
     if (command === 'queue' || command === 'q') {
         if (!serverQueue ||!serverQueue.songs.length) return msg.reply('🧱 ¡La cola está más vacía que zona sin loot pa!');
         const embed = new EmbedBuilder()
-          .setColor('#00FFFF')
-          .setTitle('🧱 ¡Cola de ¡DonCuboDJ!!')
-          .setDescription(serverQueue.songs.map((song, i) => `**${i + 1}.** ${song.title} - \`${song.duration}\``).slice(0, 10).join('\n'));
+         .setColor('#00FFFF')
+         .setTitle('🧱 ¡Cola de ¡DonCuboDJ!!')
+         .setDescription(serverQueue.songs.map((song, i) => `**${i + 1}.** ${song.title} - \`${song.duration}\``).slice(0, 10).join('\n'));
         msg.channel.send({ embeds: [embed] });
     }
 
@@ -130,6 +148,10 @@ client.on('messageCreate', async msg => {
         serverQueue.player.unpause();
         msg.reply('🧱 ¡Seguimos con el perreo!');
     }
+
+    if (command === 'test') {
+        msg.reply(`🧱 FFMPEG: ${ffmpeg? 'OK' : 'NO ENCONTRADO'} \n🧱 Cookies: ${process.env.YT_COOKIE? 'CARGADAS' : 'VACÍAS'} \n🧱 Voice: ${msg.member.voice.channel? 'OK' : 'NO ESTÁS EN CANAL'}`);
+    }
 });
 
 async function playSong(guild, song) {
@@ -140,12 +162,18 @@ async function playSong(guild, song) {
         console.log('🧱 No hay más rolas, me voy');
         serverQueue.connection?.destroy();
         queue.delete(guild.id);
+
+        // VUELVE AL STATUS FANTASMA CUANDO SE ACABA
+        client.user.setPresence({
+            activities: [{ name: '👻escuchando música👻', type: ActivityType.Listening }],
+            status: 'dnd'
+        });
         return;
     }
 
     try {
         console.log('🧱 Sacando stream de:', song.url);
-        const stream = await play.stream(song.url, { quality: 2 }); // quality 2 = audio only
+        const stream = await play.stream(song.url, { quality: 2 });
         console.log('🧱 Stream OK, tipo:', stream.type);
 
         const resource = createAudioResource(stream.stream, { inputType: stream.type });
@@ -153,12 +181,18 @@ async function playSong(guild, song) {
         serverQueue.connection.subscribe(serverQueue.player);
         console.log('🧱 Audio mandado al Discord');
 
+        // STATUS CAMBIA A LA ROLA ACTUAL
+        client.user.setPresence({
+            activities: [{ name: `${song.title}`, type: ActivityType.Listening }],
+            status: 'dnd'
+        });
+
         const embed = new EmbedBuilder()
-          .setColor('#FF4500')
-          .setTitle('🧱 ¡SONANDO AHORA!')
-          .setDescription(`**${song.title}**`)
-          .addFields({ name: 'Duración', value: song.duration, inline: true }, { name: 'La puso', value: song.requestedBy, inline: true })
-          .setFooter({ text: '¡DonCuboDJ! - El DJ de panas.bxngh.lol' });
+         .setColor('#FF4500')
+         .setTitle('🧱 ¡SONANDO AHORA!')
+         .setDescription(`**${song.title}**`)
+         .addFields({ name: 'Duración', value: song.duration, inline: true }, { name: 'La puso', value: song.requestedBy, inline: true })
+         .setFooter({ text: '¡DonCuboDJ! - El DJ de panas.bxngh.lol' });
 
         serverQueue.textChannel.send({ embeds: [embed] });
 
@@ -177,7 +211,7 @@ async function playSong(guild, song) {
 
     } catch (error) {
         console.error('🧱 ERROR AL SACAR STREAM:', error.message);
-        serverQueue.textChannel.send('🧱 No pude tocar esa rola pa. YouTube la bloqueó o es privada. Skipping...');
+        serverQueue.textChannel.send('🧱 No pude tocar esa rola pa. YouTube la bloqueó. ¿Metiste las cookies en Railway? Skipping...');
         serverQueue.songs.shift();
         playSong(guild, serverQueue.songs[0]);
     }
